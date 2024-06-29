@@ -1,4 +1,4 @@
-import { LobeChatPluginManifest, Meta } from '@lobehub/chat-plugin-sdk';
+import { LobeChatPluginManifest, PluginSchema } from '@lobehub/chat-plugin-sdk';
 
 export interface PluginIndexResponse {
   plugins: LobeChatPluginManifest[];
@@ -6,17 +6,21 @@ export interface PluginIndexResponse {
   tags: string[];
 }
 
-export interface Plugin {
+export type PluginType = 'builtin' | 'customPlugin' | 'plugin';
+
+export interface Plugin extends LobeChatPluginManifest {
   /**
-   * 插件 key
+   * 插件类型
    */
-  identifier: string;
+  pluginType: PluginType;
+
   /**
-   * 插件信息
+   * 插件配置项
    */
-  manifest: LobeChatPluginManifest;
-  /**
-   * 插件元数据
-   */
-  meta: Meta;
+  settings?: PluginSchema & {
+    /**
+     * 插件配置项数据
+     */
+    value?: Record<string, any>;
+  };
 }
