@@ -8,7 +8,7 @@ import { Virtuoso } from 'react-virtuoso';
 import { pluginSelectors, usePluginStore } from '@/store/plugin';
 import type { Plugin } from '@/types/plugin';
 
-import { PluginListTypeEnum } from '../const';
+import { PluginListTypeEnum } from '../../const';
 import Action from './Action';
 import Tag from './Tag';
 
@@ -89,7 +89,7 @@ const PluginList: FC<PluginListProps> = (props) => {
             <Paragraph className={styles.title} ellipsis={{ tooltip: true }}>
               {plugin.meta.title}
             </Paragraph>
-            <Tag pluginType={plugin.pluginType} author={plugin.author} />
+            <Tag {...plugin} />
           </div>
           <Paragraph className={styles.description} ellipsis={{ tooltip: true }}>
             {plugin.meta.description}

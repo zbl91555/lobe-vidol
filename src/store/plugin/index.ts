@@ -1,13 +1,16 @@
+import { LobeChatPluginManifest } from '@lobehub/chat-plugin-sdk';
 import { devtools, persist, subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { shallow } from 'zustand/shallow';
 import { createWithEqualityFn } from 'zustand/traditional';
 import { StateCreator } from 'zustand/vanilla';
 
-import { getPluginIndex } from '@/services/plugin';
+import { getPluginIndex, getPluginManifest } from '@/services/plugin';
 import { Plugin } from '@/types/plugin';
 
+import { useAgentStore } from '../agent';
 import { initialState } from './initialState';
+import * as pluginSelectors from './selectors';
 
 const PLUGIN_STORAGE_KEY = 'vidol-chat-plugin-storage';
 
@@ -16,14 +19,15 @@ export interface PluginStore {
    * 应用商店获的插件
    */
   allPlugins: Plugin[];
+
   /**
    * 卸载插件
    */
-  disablePlugin: (agentId: string, pluginId: string) => void;
+  disablePlugin: (pluginId: string) => void;
   /**
    * 启用插件
    */
-  enablePlugin: (agentId: string, pluginId: string) => void;
+  enablePlugin: (pluginId: string) => void;
   /**
    * 角色启用的插件
    */
@@ -32,15 +36,12 @@ export interface PluginStore {
    * 获取插件商店列表
    */
   fetchPluginIndex: () => Promise<void>;
-
   /**
    * 安装插件
    */
   installPlugin: (identifier: string) => void;
+
   /**
-   * 禁用插件
-   */
-/**
    * 已安装的插件标识
    */
   installedPluginIds: string[];
@@ -49,9 +50,13 @@ export interface PluginStore {
    */
   installingPluginIds: string[];
   /**
+   * 插件 manifest
+   */
+  pluginManifestMap: Record<string, LobeChatPluginManifest>;
+  /**
    * 插件配置值
    */
-  pluginSettingValueMap: Record<string, Record<string, any>>;
+  pluginSettingsValueMap: Record<string, Record<string, any>>;
   /**
    * 卸载插件
    */
@@ -59,11 +64,12 @@ export interface PluginStore {
   /**
    * 更新插件配置
    */
-  updatePluginSettingValue: (identifier: string, value: Record<string, any>) => void;
+  updatePluginSettingsValue: (identifier: string, value: Record<string, any>) => void;
 }
 
-const createPluginStore: StateCreator<PluginStore, [['zustand/devtools', never]]> = (set) => ({
+const createPluginStore: StateCreator<PluginStore, [['zustand/devtools', never]]> = (set, get) => ({
   ...initialState,
+
   fetchPluginIndex: async () => {
     const { plugins } = await getPluginIndex();
 
@@ -72,27 +78,33 @@ const createPluginStore: StateCreator<PluginStore, [['zustand/devtools', never]]
         allPlugins: plugins.map((plugin) => {
           return {
             ...plugin,
-            pluginType: 'plugin',
+            type: 'plugin',
           };
         }),
       });
     }
   },
-  enablePlugin: (agentId, pluginId) => {
+
+  enablePlugin: (pluginId) => {
+    const currentAgentId = useAgentStore.getState().currentIdentifier;
+
     set((state) => {
-      const enabledPluginIds = state.enabledAgentPluginIdsMap[agentId];
+      const enabledPluginIds = state.enabledAgentPluginIdsMap[currentAgentId];
       if (Array.isArray(enabledPluginIds)) {
         enabledPluginIds.push(pluginId);
       } else {
-        state.enabledAgentPluginIdsMap[agentId] = [pluginId];
+        state.enabledAgentPluginIdsMap[currentAgentId] = [pluginId];
       }
 
       return state;
     });
   },
-  disablePlugin: (agentId, pluginId) => {
+
+  disablePlugin: (pluginId) => {
+    const currentAgentId = useAgentStore.getState().currentIdentifier;
+
     set((state) => {
-      const enabledPluginIds = state.enabledAgentPluginIdsMap[agentId];
+      const enabledPluginIds = state.enabledAgentPluginIdsMap[currentAgentId];
       if (Array.isArray(enabledPluginIds)) {
         enabledPluginIds.splice(enabledPluginIds.indexOf(pluginId), 1);
       }
@@ -101,29 +113,37 @@ const createPluginStore: StateCreator<PluginStore, [['zustand/devtools', never]]
     });
   },
 
-  installPlugin: (identifier) => {
+  installPlugin: async (identifier) => {
     set((state) => {
       state.installingPluginIds.push(identifier);
-      state.installedPluginIds.push(identifier);
       return state;
     });
 
-    // 取消 loading
+    // 安装时需要获取 plugin manifest
+    const plugin = pluginSelectors.getPluginById(identifier)(get());
+
+    const pluginManifest = await getPluginManifest(plugin?.manifest);
+
     set((state) => {
       state.installingPluginIds.splice(state.installingPluginIds.indexOf(identifier), 1);
+
+      state.installedPluginIds.push(identifier);
+      state.pluginManifestMap[identifier] = pluginManifest;
       return state;
     });
   },
+
   uninstallPlugin: (identifier) => {
-    set((store) => {
-      store.installedPluginIds.splice(store.installedPluginIds.indexOf(identifier), 1);
-      return store;
+    set((state) => {
+      state.installedPluginIds.splice(state.installedPluginIds.indexOf(identifier), 1);
+      delete state.pluginManifestMap[identifier];
+      return state;
     });
   },
 
-  updatePluginSettingValue: (identifier, value) => {
+  updatePluginSettingsValue: (identifier, value) => {
     set((state) => {
-      state.pluginSettingValueMap[identifier] = value;
+      state.pluginSettingsValueMap[identifier] = value;
       return state;
     });
   },
@@ -140,6 +160,7 @@ export const usePluginStore = createWithEqualityFn<PluginStore>()(
         partialize: (state) => {
           return {
             installedPluginIds: state.installedPluginIds,
+            pluginManifestMap: state.pluginManifestMap,
           };
         },
       },
@@ -147,5 +168,7 @@ export const usePluginStore = createWithEqualityFn<PluginStore>()(
   ),
   shallow,
 );
+
+
 
 export * as pluginSelectors from './selectors';

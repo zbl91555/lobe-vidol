@@ -6,7 +6,7 @@ import React, { FC } from 'react';
 
 import type { Plugin } from '@/types/plugin';
 
-interface PluginTagProps extends Pick<Plugin, 'author' | 'pluginType'> {
+interface PluginTagProps extends Plugin {
   showIcon?: boolean;
   showText?: boolean;
 }
@@ -39,9 +39,9 @@ const useStyles = createStyles(({ css, token }) => ({
 }));
 
 const PluginTag: FC<PluginTagProps> = (props) => {
-  const { pluginType, author, showIcon } = props;
+  const { type, author, showIcon } = props;
   const { styles, cx } = useStyles();
-  const isCustom = pluginType === 'customPlugin';
+  const isCustom = type === 'customPlugin';
   const isOfficial = author === 'LobeHub';
 
   return (

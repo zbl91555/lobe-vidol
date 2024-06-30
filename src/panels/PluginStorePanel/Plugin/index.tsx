@@ -1,7 +1,6 @@
-import { Button, Input, Segmented } from 'antd';
+import { Input, Segmented } from 'antd';
 import { createStyles } from 'antd-style';
 import classNames from 'classNames';
-import { PackagePlus } from 'lucide-react';
 import React, { FC, useState } from 'react';
 
 import { PluginListTypeEnum } from '../const';
@@ -78,7 +77,7 @@ const Plugin: FC<PluginProps> = (props) => {
           placeholder="请输入插件名称或关键字"
           onChange={(e) => setSearchKeyword(e.target.value)}
         />
-        <Button icon={<PackagePlus size={15} />}>自定义插件</Button>
+        {/* <Button icon={<PackagePlus size={15} />}>自定义插件</Button> */}
       </div>
       <PluginList
         type={pluginListType}

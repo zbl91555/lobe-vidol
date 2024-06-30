@@ -5,9 +5,11 @@ export const initialState = {
 
   installedPluginIds: [],
 
+  pluginManifestMap: {},
+
   installingPluginIds: [],
 
-  pluginSettingValueMap: {},
+  pluginSettingsValueMap: {},
 
   enabledAgentPluginIdsMap: {},
 };

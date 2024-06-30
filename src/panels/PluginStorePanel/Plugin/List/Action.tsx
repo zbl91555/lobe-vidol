@@ -1,21 +1,34 @@
 import { ActionIcon, Icon } from '@lobehub/ui';
 import { App, Button, Dropdown } from 'antd';
+import { createStyles } from 'antd-style';
 import { InfoIcon, MoreVerticalIcon, Settings, Trash2 } from 'lucide-react';
-import React, { FC, useState } from 'react';
+import React, { FC, useRef } from 'react';
 
 import { pluginSelectors, usePluginStore } from '@/store/plugin';
 import { Plugin } from '@/types/plugin';
 
-import PluginDetailModal from './DetailModal';
+import { PluginDetailModalTabKeyEnum } from '../../const';
+import { hasPluginSettings } from '../../util';
+import PluginDetailModal, { ActionType } from '../DetailModal';
 
 interface PluginActionProps {
   identifier: Plugin['identifier'];
 }
 
+const useStyles = createStyles(({ css }) => ({
+  container: css`
+    display: flex;
+    align-items: center;
+  `,
+}));
+
 const PluginAction: FC<PluginActionProps> = (props) => {
   const { identifier } = props;
   const { modal } = App.useApp();
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  const { styles } = useStyles();
+
+  const modalActionRef = useRef<ActionType>(null);
 
   const [plugin, isInstalled, isInstalling, uninstallPlugin, installPlugin] = usePluginStore(
     (s) => [
@@ -27,13 +40,20 @@ const PluginAction: FC<PluginActionProps> = (props) => {
     ],
   );
 
-  const hasSettings =
-    plugin?.settings?.properties && Object.keys(plugin.settings.properties).length > 0;
-
   if (isInstalled) {
     return (
-      <>
-        {hasSettings && <ActionIcon icon={Settings} title="设置" />}
+      <div className={styles.container}>
+        {hasPluginSettings(plugin) && (
+          <ActionIcon
+            icon={Settings}
+            title="设置"
+            onClick={() => {
+              modalActionRef.current?.open({
+                activeTabKey: PluginDetailModalTabKeyEnum.Settings,
+              });
+            }}
+          />
+        )}
         <Dropdown
           menu={{
             items: [
@@ -42,7 +62,7 @@ const PluginAction: FC<PluginActionProps> = (props) => {
                 key: 'detail',
                 label: '详情',
                 onClick: () => {
-                  setIsDetailModalOpen(true);
+                  modalActionRef.current?.open();
                 },
               },
               {
@@ -67,12 +87,8 @@ const PluginAction: FC<PluginActionProps> = (props) => {
         >
           <ActionIcon icon={MoreVerticalIcon} />
         </Dropdown>
-        <PluginDetailModal
-          identifier={identifier}
-          open={isDetailModalOpen}
-          onCancel={() => setIsDetailModalOpen(false)}
-        />
-      </>
+        <PluginDetailModal identifier={identifier} actionRef={modalActionRef} />
+      </div>
     );
   } else {
     return (

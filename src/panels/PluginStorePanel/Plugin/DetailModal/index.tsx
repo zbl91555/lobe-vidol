@@ -1,22 +1,23 @@
-import { Avatar, Modal, ModalProps, TabsNav, Tag } from '@lobehub/ui';
+import { Avatar, Modal, ModalProps, TabsNav, TabsNavProps, Tag } from '@lobehub/ui';
 import { Divider } from 'antd';
 import { createStyles } from 'antd-style';
 import { startCase } from 'lodash-es';
-import React, { FC, Ref, useImperativeHandle, useState } from 'react';
+import React, { FC, Ref, useImperativeHandle } from 'react';
 import useMergeState from 'use-merge-value';
 
 import { pluginSelectors, usePluginStore } from '@/store/plugin';
 
-import { PluginDetailModalTabKeyEnum } from '../const';
+import { PluginDetailModalTabKeyEnum } from '../../const';
+import { hasPluginSettings } from '../../util';
 
 export interface ActionType {
-  open: (modalProps: { activeTabKey?: PluginDetailModalTabKeyEnum, identifier: string; }) => void;
+  open: (props?: Pick<PluginDetailModalProps, 'identifier' | 'activeTabKey'>) => void;
 }
 
 interface PluginDetailModalProps extends ModalProps {
   actionRef?: Ref<ActionType>;
   activeTabKey?: PluginDetailModalTabKeyEnum;
-  identifier: string;
+  identifier?: string;
 }
 
 const useStyles = createStyles(({ css, token }) => ({
@@ -46,28 +47,59 @@ const useStyles = createStyles(({ css, token }) => ({
 const PluginDetailModal: FC<PluginDetailModalProps> = (props) => {
   const { styles, theme } = useStyles();
 
-  const { activeTabKey: activeTabKeyProp, actionRef, ...restModalProps } = props;
+  const { actionRef, ...restModalProps } = props;
 
-  const [identifier, setIdentifier] = useState<string>('');
-  const [activeTabKey, setActiveTabKey] = useMergeState(PluginDetailModalTabKeyEnum.Api, {
-    value: activeTabKeyProp,
+  const [open, setOpen] = useMergeState(false, {
+    value: props.open,
   });
+  const [identifier, setIdentifier] = useMergeState('', {
+    value: props.identifier,
+  });
+  const [activeTabKey, setActiveTabKey] = useMergeState(PluginDetailModalTabKeyEnum.Api, {
+    value: props.activeTabKey,
+  });
+
+  const [plugin, updatePluginSettingsValue] = usePluginStore((s) => [
+    pluginSelectors.getPluginById(identifier)(s),
+    s.updatePluginSettingsValue,
+  ]);
 
   useImperativeHandle(actionRef, () => {
     return {
-      open: (modalProps) => {
-        const { identifier } = modalProps;
-        setIdentifier(identifier);
+      open: (modalProps = {}) => {
+        const { identifier, activeTabKey } = modalProps;
+
+        if (identifier) {
+          setIdentifier(identifier);
+        }
+        if (activeTabKey) {
+          setActiveTabKey(activeTabKey);
+        }
+
+        setOpen(true);
       },
     };
   });
 
-  const [plugin] = usePluginStore((s) => [pluginSelectors.getPluginById(identifier)(s)]);
-
   const pluginMeta = plugin?.meta;
+  const hasSettings = hasPluginSettings(plugin);
 
   return (
-    <Modal title="插件详情" {...restModalProps}>
+    <Modal
+      title="插件详情"
+      {...restModalProps}
+      open={open}
+      onOk={() => {
+        if (hasSettings) {
+          // TODO:
+          updatePluginSettingsValue(identifier, {});
+        }
+        setOpen(false);
+      }}
+      onCancel={() => {
+        setOpen(false);
+      }}
+    >
       <div className={styles.modalContent}>
         <Avatar
           src={pluginMeta?.avatar}
@@ -84,6 +116,18 @@ const PluginDetailModal: FC<PluginDetailModalProps> = (props) => {
         <div className={styles.desc}>{pluginMeta?.description}</div>
         <Divider style={{ marginBottom: 0, marginTop: 8 }} />
         <TabsNav
+          items={
+            [
+              {
+                key: PluginDetailModalTabKeyEnum.Api,
+                label: '插件能力',
+              },
+              hasSettings && {
+                key: PluginDetailModalTabKeyEnum.Settings,
+                label: '设置',
+              },
+            ].filter(Boolean) as TabsNavProps['items']
+          }
           activeKey={activeTabKey}
           onTabClick={(activeTabKey) => {
             setActiveTabKey(activeTabKey as PluginDetailModalTabKeyEnum);
