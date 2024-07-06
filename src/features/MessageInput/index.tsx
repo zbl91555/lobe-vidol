@@ -10,9 +10,9 @@ import { Center, Flexbox } from 'react-layout-kit';
 import StopLoadingIcon from '@/components/StopLoading';
 import Dance from '@/features/Actions/Dance';
 import History from '@/features/Actions/History';
+import Plugin from '@/features/Actions/Plugin';
 import Record from '@/features/Actions/Record';
 import TokenMini from '@/features/Actions/TokenMini';
-import Tool from '@/features/Actions/Tool';
 import Video from '@/features/Actions/Video';
 import Voice from '@/features/Actions/Voice';
 import useChatInput from '@/hooks/useSendMessage';
@@ -75,7 +75,7 @@ const InputArea = memo((props: InputAreaProps) => {
           <Record />
           <Video key="video" />
           <Dance key="dance" />
-          <Tool key="tool" />
+          <Plugin key="plugin" />
           <TokenMini />
         </Space>
         <Space size={4}>

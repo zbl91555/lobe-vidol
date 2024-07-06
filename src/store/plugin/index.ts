@@ -169,6 +169,4 @@ export const usePluginStore = createWithEqualityFn<PluginStore>()(
   shallow,
 );
 
-
-
 export * as pluginSelectors from './selectors';

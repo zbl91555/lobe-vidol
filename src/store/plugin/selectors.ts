@@ -39,9 +39,9 @@ export const getInstalledPlugins = (s: PluginStore) => {
   return installedPluginIds.map((id) => pluginMap[id]).filter(Boolean) as Plugin[];
 };
 
-export const getAgentEnablePlugins = (agentId: string) => (s: PluginStore) => {
+export const getAgentEnabledPlugins = (agentId: string) => (s: PluginStore) => {
   const enabledPluginIds = s.enabledAgentPluginIdsMap[agentId];
   const pluginMap = keyBy(getAllPlugins(s), 'identifier');
 
-  return enabledPluginIds.map((id) => pluginMap[id]).filter(Boolean) as Plugin[];
+  return (enabledPluginIds?.map((id) => pluginMap[id]).filter(Boolean) || []) as Plugin[];
 };
