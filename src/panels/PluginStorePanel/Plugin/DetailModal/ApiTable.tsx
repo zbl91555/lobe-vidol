@@ -1,17 +1,45 @@
-import { createStyles } from 'antd-style';
+import { Empty, Table } from 'antd';
 import React, { FC } from 'react';
+import { Flexbox } from 'react-layout-kit';
+
+import { pluginSelectors, usePluginStore } from '@/store/plugin';
 
 interface ApiTableProps {
-  identifier?: string;
+  identifier: string;
 }
 
-const useStyles = createStyles(({ css }) => ({
-  container: css``,
-}));
+const ApiTable: FC<ApiTableProps> = (props) => {
+  const { identifier } = props;
 
-const ApiTable: FC<ApiTableProps> = () => {
-  const { styles } = useStyles();
-  return <div className={styles.container}></div>;
+  const plugin = usePluginStore(pluginSelectors.getPluginById(identifier));
+
+  const pluginManifest = plugin?.pluginManifest;
+
+  if (!pluginManifest?.api) return <Empty />;
+
+  return (
+    <Flexbox paddingBlock={16} width={'100%'}>
+      <Table
+        bordered
+        columns={[
+          {
+            dataIndex: 'name',
+            render: (name: string) => <code>{name}</code>,
+            title: 'API 名称',
+          },
+          {
+            dataIndex: 'description',
+            title: 'API 描述',
+          },
+        ]}
+        dataSource={pluginManifest.api}
+        pagination={false}
+        rowKey={'name'}
+        size={'small'}
+        tableLayout="fixed"
+      />
+    </Flexbox>
+  );
 };
 ApiTable.displayName = 'ApiTable';
 

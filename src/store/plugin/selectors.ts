@@ -14,12 +14,13 @@ export const isPluginInstalled = (identifier: string) => (s: PluginStore) => {
 };
 
 export const getAllPlugins = (s: PluginStore) => {
-  const { allPlugins, pluginManifestMap } = s;
+  const { allPlugins, pluginManifestMap, pluginSettingsValueMap } = s;
   return allPlugins.map((plugin) => {
     const { identifier } = plugin;
 
     return produce(plugin, (state) => {
       state.pluginManifest = pluginManifestMap[identifier];
+      state.pluginSettingsValue = pluginSettingsValueMap[identifier];
       return state;
     });
   });

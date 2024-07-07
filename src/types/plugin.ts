@@ -8,6 +8,10 @@ export interface Plugin extends LobeChatPluginMeta {
    */
   pluginManifest?: LobeChatPluginManifest;
   /**
+   * 插件配置
+   */
+  pluginSettingsValue?: Record<string, any>;
+  /**
    * 插件类型
    */
   type: PluginType;

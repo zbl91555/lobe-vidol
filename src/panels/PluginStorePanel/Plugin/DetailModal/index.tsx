@@ -2,13 +2,15 @@ import { Avatar, Modal, ModalProps, TabsNav, TabsNavProps, Tag } from '@lobehub/
 import { Divider } from 'antd';
 import { createStyles } from 'antd-style';
 import { startCase } from 'lodash-es';
-import React, { FC, Ref, useImperativeHandle } from 'react';
+import React, { FC, Ref, useEffect, useImperativeHandle, useState } from 'react';
 import useMergeState from 'use-merge-value';
 
+import PluginSettings from '@/features/PluginSettings';
 import { pluginSelectors, usePluginStore } from '@/store/plugin';
 
 import { PluginDetailModalTabKeyEnum } from '../../const';
 import { hasPluginSettings } from '../../util';
+import ApiTable from './ApiTable';
 
 export interface ActionType {
   open: (props?: Pick<PluginDetailModalProps, 'identifier' | 'activeTabKey'>) => void;
@@ -49,6 +51,7 @@ const PluginDetailModal: FC<PluginDetailModalProps> = (props) => {
 
   const { actionRef, ...restModalProps } = props;
 
+  const [pluginSettingsValue, setPluginSettingsValue] = useState({});
   const [open, setOpen] = useMergeState(false, {
     value: props.open,
   });
@@ -81,6 +84,12 @@ const PluginDetailModal: FC<PluginDetailModalProps> = (props) => {
     };
   });
 
+  useEffect(() => {
+    if (plugin?.pluginSettingsValue) {
+      setPluginSettingsValue(plugin.pluginSettingsValue);
+    }
+  }, [plugin?.pluginSettingsValue]);
+
   const pluginMeta = plugin?.meta;
   const hasSettings = hasPluginSettings(plugin);
 
@@ -91,8 +100,7 @@ const PluginDetailModal: FC<PluginDetailModalProps> = (props) => {
       open={open}
       onOk={() => {
         if (hasSettings) {
-          // TODO:
-          updatePluginSettingsValue(identifier, {});
+          updatePluginSettingsValue(identifier, pluginSettingsValue);
         }
         setOpen(false);
       }}
@@ -133,7 +141,15 @@ const PluginDetailModal: FC<PluginDetailModalProps> = (props) => {
             setActiveTabKey(activeTabKey as PluginDetailModalTabKeyEnum);
           }}
           variant={'compact'}
-        ></TabsNav>
+        />
+        {activeTabKey === PluginDetailModalTabKeyEnum.Api && <ApiTable identifier={identifier} />}
+        {activeTabKey === PluginDetailModalTabKeyEnum.Settings && (
+          <PluginSettings
+            schema={plugin?.pluginManifest?.settings}
+            value={pluginSettingsValue}
+            onChange={setPluginSettingsValue}
+          />
+        )}
       </div>
     </Modal>
   );

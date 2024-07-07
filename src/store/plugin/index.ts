@@ -1,4 +1,5 @@
 import { LobeChatPluginManifest } from '@lobehub/chat-plugin-sdk';
+import { pick } from 'lodash-es';
 import { devtools, persist, subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { shallow } from 'zustand/shallow';
@@ -158,10 +159,7 @@ export const usePluginStore = createWithEqualityFn<PluginStore>()(
       {
         name: PLUGIN_STORAGE_KEY,
         partialize: (state) => {
-          return {
-            installedPluginIds: state.installedPluginIds,
-            pluginManifestMap: state.pluginManifestMap,
-          };
+          return pick(state, ['installedPluginIds', 'pluginManifestMap', 'pluginSettingsValueMap']);
         },
       },
     ),
