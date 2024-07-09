@@ -159,7 +159,12 @@ export const usePluginStore = createWithEqualityFn<PluginStore>()(
       {
         name: PLUGIN_STORAGE_KEY,
         partialize: (state) => {
-          return pick(state, ['installedPluginIds', 'pluginManifestMap', 'pluginSettingsValueMap']);
+          return pick(state, [
+            'installedPluginIds',
+            'enabledAgentPluginIdsMap',
+            'pluginManifestMap',
+            'pluginSettingsValueMap',
+          ]);
         },
       },
     ),

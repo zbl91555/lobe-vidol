@@ -24,12 +24,9 @@ export const POST = async (req: Request) => {
 
   const openai = new OpenAI(config);
 
-  const { model, messages } = data;
-
   try {
     const completion = await openai.chat.completions.create({
-      messages,
-      model,
+      ...data,
       stream: true,
     } as OpenAI.ChatCompletionCreateParamsStreaming);
 

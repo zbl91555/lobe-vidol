@@ -1,5 +1,17 @@
 import { APIErrorResponse, ErrorTypeEnum } from '@/types/api';
-import { ChatMessageError } from '@/types/chat';
+import { ChatMessageError, ToolCallMessage } from '@/types/chat';
+import { parseToolCalls } from '@/utils/toolCall';
+
+export interface MessageTextChunk {
+  text: string;
+  type: 'text';
+}
+
+interface MessageToolCallsChunk {
+  isAnimationActives?: boolean[];
+  tool_calls: ToolCallMessage[];
+  type: 'tool_calls';
+}
 
 const createSmoothMessage = (params: { onTextUpdate: (delta: string, text: string) => void }) => {
   let buffer = '';
@@ -90,16 +102,20 @@ export const fetchSEE = async (
   handler: {
     onAbort?: (text: string) => void;
     onMessageError?: (error: ChatMessageError) => void;
-    onMessageUpdate?: (text: string) => void;
+    onMessageUpdate?: (chunk: MessageTextChunk | MessageToolCallsChunk) => void;
   },
 ) => {
   let output = '';
+  let toolCalls: ToolCallMessage[] = [];
 
   const textController = createSmoothMessage({
     onTextUpdate: (delta, text) => {
       output = text;
 
-      handler.onMessageUpdate?.(delta);
+      handler.onMessageUpdate?.({
+        type: 'text',
+        text: delta,
+      });
     },
   });
 
@@ -129,18 +145,49 @@ export const fetchSEE = async (
     const decoder = new TextDecoder('utf8');
 
     let done = false;
+    let messageType: 'text' | 'tool_calls' = 'text';
+
+    const detectMessageType = (value: string, done: boolean) => {
+      if (/{"tool_calls":/i.test(value)) {
+        messageType = 'tool_calls';
+      }
+
+      if (done) {
+        messageType = 'text';
+      }
+
+      return messageType;
+    };
 
     while (!done) {
       const { value, done: doneReading } = await reader.read();
+
       done = doneReading;
       const chunkValue = decoder.decode(value, { stream: true });
-      textController.pushToQueue(chunkValue);
 
-      if (textController.isTokenRemain()) {
-        await textController.startAnimation(15);
+      switch (detectMessageType(chunkValue, done)) {
+        case 'text': {
+          textController.pushToQueue(chunkValue);
+          if (textController.isTokenRemain()) {
+            await textController.startAnimation(15);
+          }
+          if (!textController.isAnimationActive) textController.startAnimation();
+          break;
+        }
+        case 'tool_calls': {
+          output += chunkValue;
+          try {
+            toolCalls = parseToolCalls(toolCalls, JSON.parse(output)?.tool_calls);
+            console.log(toolCalls);
+            handler.onMessageUpdate?.({
+              tool_calls: toolCalls,
+              type: 'tool_calls',
+            });
+          } catch {
+            // ignore error
+          }
+        }
       }
-
-      if (!textController.isAnimationActive) textController.startAnimation();
     }
 
     return returnRes;

@@ -32,6 +32,38 @@ export interface OpenAIChatMessage {
   role: LLMRoleType;
 }
 
+export interface ChatCompletionFunctions {
+  /**
+   * The description of what the function does.
+   * @type {string}
+   * @memberof ChatCompletionFunctions
+   */
+  description?: string;
+  /**
+   * The name of the function to be called. Must be a-z, A-Z, 0-9, or contain underscores and dashes, with a maximum length of 64.
+   * @type {string}
+   * @memberof ChatCompletionFunctions
+   */
+  name: string;
+  /**
+   * The parameters the functions accepts, described as a JSON Schema object. See the [guide](/docs/guides/gpt/function-calling) for examples, and the [JSON Schema reference](https://json-schema.org/understanding-json-schema/) for documentation about the format.
+   * @type {{ [key: string]: any }}
+   * @memberof ChatCompletionFunctions
+   */
+  parameters?: {
+    [key: string]: any;
+  };
+}
+
+export interface ChatCompletionTool {
+  function: ChatCompletionFunctions;
+
+  /**
+   * The type of the tool. Currently, only `function` is supported.
+   */
+  type: 'function';
+}
+
 /**
  * @title Role Stream Payload
  */
@@ -76,6 +108,7 @@ export interface ChatStreamPayload {
    * @default 1
    */
   temperature: number;
+  tools?: ChatCompletionTool[];
   /**
    * @title 在生成文本等任务中，选择可能性最高的前 P 个词的概率累加和
    * @default 1

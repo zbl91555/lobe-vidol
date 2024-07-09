@@ -18,6 +18,7 @@ import { ShareGPTConversation } from '@/types/share';
 import { fetchSEE } from '@/utils/fetch';
 import storage from '@/utils/storage';
 
+import { pluginSelectors, usePluginStore } from '../plugin';
 import { initialState } from './initialState';
 import { MessageActionType, messageReducer } from './reducers/message';
 import { sessionSelectors } from './selectors';
@@ -222,6 +223,11 @@ export const createSessionStore: StateCreator<SessionStore, [['zustand/devtools'
       return;
     }
 
+    const systemRole = sessionSelectors.currentSystemRole(get());
+    const pluginStore = usePluginStore.getState();
+    const toolsSchema = pluginSelectors.getToolsSchema(currentAgent.agentId)(pluginStore);
+    const pluginSystemRole = pluginSelectors.getPluginSystemRole(currentAgent.agentId)(pluginStore);
+
     const abortController = new AbortController();
 
     set({ chatLoadingId: assistantId, abortController });
@@ -233,11 +239,12 @@ export const createSessionStore: StateCreator<SessionStore, [['zustand/devtools'
           ...(currentAgent.params || DEFAULT_LLM_CONFIG.params),
           messages: [
             {
-              content: currentAgent.systemRole,
+              content: systemRole + pluginSystemRole,
               role: 'system',
             } as ChatMessage,
             ...messages,
           ],
+          tools: toolsSchema,
         },
         { signal: abortController.signal },
       );
@@ -258,42 +265,49 @@ export const createSessionStore: StateCreator<SessionStore, [['zustand/devtools'
           type: 'UPDATE_MESSAGE',
         });
       },
-      onMessageUpdate: (txt: string) => {
-        const { voiceOn } = get();
+      onMessageUpdate: (message) => {
+        if (message.type === 'text') {
+          const { text } = message;
+          const { voiceOn } = get();
 
-        if (voiceOn) {
-          // 语音合成
-          receivedMessage += txt;
-          // 文本切割
-          const sentenceMatch = receivedMessage.match(/^(.+[\n~。！．？]|.{10,}[,、])/);
-          if (sentenceMatch && sentenceMatch[0]) {
-            const sentence = sentenceMatch[0];
-            sentences.push(sentence);
-            receivedMessage = receivedMessage.slice(sentence.length).trimStart();
+          if (voiceOn) {
+            // 语音合成
+            receivedMessage += text;
+            // 文本切割
+            const sentenceMatch = receivedMessage.match(/^(.+[\n~。！．？]|.{10,}[,、])/);
+            if (sentenceMatch && sentenceMatch[0]) {
+              const sentence = sentenceMatch[0];
+              sentences.push(sentence);
+              receivedMessage = receivedMessage.slice(sentence.length).trimStart();
 
-            if (
-              !sentence.replaceAll(
-                /^[\s()[\]}«»‹›〈〉《》「」『』【】〔〕〘〙〚〛（）［］｛]+$/g,
-                '',
-              )
-            ) {
-              return;
+              if (
+                !sentence.replaceAll(
+                  /^[\s()[\]}«»‹›〈〉《》「」『』【】〔〕〘〙〚〛（）［］｛]+$/g,
+                  '',
+                )
+              ) {
+                return;
+              }
+              handleSpeakAi(sentence);
             }
-            handleSpeakAi(sentence);
           }
+
+          // 对话更新
+          aiMessage += text;
+
+          dispatchMessage({
+            payload: {
+              id: assistantId,
+              key: 'content',
+              value: aiMessage,
+            },
+            type: 'UPDATE_MESSAGE',
+          });
         }
 
-        // 对话更新
-        aiMessage += txt;
-
-        dispatchMessage({
-          payload: {
-            id: assistantId,
-            key: 'content',
-            value: aiMessage,
-          },
-          type: 'UPDATE_MESSAGE',
-        });
+        if (message.type === 'tool_calls') {
+          // const { tool_calls } = message;
+        }
       },
     });
     set({ chatLoadingId: undefined });
